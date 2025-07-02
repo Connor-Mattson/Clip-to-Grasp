@@ -23,6 +23,7 @@ setup:
 	conda activate $(ENV_NAME) && pip install -r $(REQUIREMENTS)
 
 install:
+	conda env update --file $(ENV_FILE) --prune
 	pip install -r $(REQUIREMENTS)
 
 test:

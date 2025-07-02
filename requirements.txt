@@ -1,0 +1,8 @@
+clip @ git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1
+ftfy==6.3.1
+packaging==25.0
+pillow==11.3.0
+regex==2024.11.6
+torchvision==0.22.1
+tqdm==4.67.1
+wcwidth==0.2.13
