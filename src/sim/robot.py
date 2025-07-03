@@ -65,7 +65,7 @@ class Robot:
 
         return joint_poses
 
-    def position_control(self, joint_poses):
+    def position_control(self, joint_poses, max_steps=1000, max_velocity=1.8):
         # Apply position control with stronger motor parameters
         for i, joint_index in enumerate(self.joints): 
             p.setJointMotorControl2(
@@ -75,12 +75,11 @@ class Robot:
                 targetPosition=joint_poses[i],
                 # positionGain=0.1,      # P gain for responsiveness
                 # velocityGain=0.01,     # D gain for stability  
-                # force=200,             # Increased max force
-                # maxVelocity=2.0        # Increased max velocity
+                # force=200,             
+                maxVelocity=max_velocity        
             )
             
-        # Wait for joints to reach target positions
-        max_steps = 1000  # Increased timeout
+        # Wait for joints to reach target positions 
         for step in range(max_steps):
             p.stepSimulation()
             time.sleep(1./240.)
@@ -126,5 +125,5 @@ class Robot:
                 jointIndex=i,
                 controlMode=p.POSITION_CONTROL,
                 targetPosition=joint_value,
-                force=10
+                force=100
             )

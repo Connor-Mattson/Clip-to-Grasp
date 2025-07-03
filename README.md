@@ -1,4 +1,6 @@
 # RoboCLIP
+_Authors: Connor Mattson (@Connor-Mattson)_
+
 Simulated Grasping from Multi-Modal Grounding (CLIP)
 
 ### TL;DR
@@ -25,7 +27,7 @@ To test that the clip model is working you can run
 python -m examples.clip_example
 ```
 
-This will embed an image of [my dog](media/dog.jpeg) to the model and determine the similarity to "A Diagram", "A Dog", and "A Cat", you should see output similar to:
+This will embed an image of [my dog](media/dog.jpg) to the model and determine the similarity to "A Diagram", "A Dog", and "A Cat", you should see output similar to:
 ```
 Label probs: [('a diagram', 0.012420654296875), ('a dog', 0.986328125), ('a cat', 0.0014600753784179688)]
 ```
@@ -39,3 +41,13 @@ python -m examples.panda_ik
 
 If your pybullet is setup correctly, you should see the OpenGL gui open and the robot pick up a rigid block in the environment.
 
+To see an example of hard-coded pick-n-place with several scene objects, you can run 
+
+```bash
+python -m examples.ycb_scene
+```
+
+
+## Acknowledgements
+- Thanks to @kwonathan for the [great repo with URDFs for the YCB dataset](https://github.com/kwonathan/ycb_urdfs/tree/main).
+- Thanks to OpenAI for publically releasing the weights for their CLIP model, which empowered this project with vision + language capabilities.
