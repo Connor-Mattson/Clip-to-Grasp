@@ -5,10 +5,10 @@ import time
 import math
 
 class Robot:
-    def __init__(self, robot_id, ee_link_index=11, joint_range=[0, 7], gripper_joints=[9, 11]):
+    def __init__(self, robot_id, ee_link_index=11, joint_range=[0, 7], gripper_joints=[9, 11], camera_ind=None):
         self.id = robot_id
         self.ee_ind = ee_link_index
-        self.camera_ind = 11
+        self.camera_ind = camera_ind if camera_ind is not None else ee_link_index
         self.joints = range(joint_range[0], joint_range[1])
         self.gripper_joints = range(gripper_joints[0], gripper_joints[1])
         self.gripper_open = [0.08, 0.08]
