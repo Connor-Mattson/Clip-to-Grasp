@@ -38,3 +38,6 @@ class BulletSim:
     def close(self):
         p.disconnect()
 
+    def enable_auxiliary_camera(self):
+        p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 1)
+
