@@ -26,40 +26,37 @@ initial_joint_positions = [0.0, 0.0, 0.0, -1.5, 0.0, 1.5, 0.0]
 for i, joint_pos in enumerate(initial_joint_positions):
     p.resetJointState(robot_id, i, joint_pos)
 
+# Add our models to the simulators search path
+sim.extend_search_path("models/ycb")
+
 # Load in an example object
 objs = [
     ModelObj(
-        name="cube_small",
-        path="cube_small.urdf",
-        position=[0.7, 0.2, 0.05]
+        name="apple",
+        path="013_apple.urdf",
+        position=[0.7, 0.3, 0.05],
+        scale=0.07
+    ),
+    ModelObj(
+        name="banana",
+        path="011_banana.urdf",
+        position=[0.7, 0.1, 0.05],
+        scale=0.07
+    ),
+    ModelObj(
+        name="soup",
+        path="005_tomato_soup_can.urdf",
+        position=[0.7, -0.1, 0.05],
+        scale=0.07
+    ),
+    ModelObj(
+        name="mug",
+        path="025_mug.urdf",
+        position=[0.7, -0.3, 0.05],
+        scale=0.07
     )
 ]
 sim.register_objects(objs)
 
-des_joints = robot.ik(
-    objs[0].position[0], 
-    objs[0].position[1],
-    objs[0].position[2] - 0.03 # Small z offset
-)
-
-print("Position Control")
-robot.open_gripper()
-robot.position_control(des_joints)
-
-robot.close_gripper()
-# Sim loop
-for i in range(20):
-    p.stepSimulation()
-    time.sleep(1./240.)
-
-goal_pos = [0.7, 0.2, 0.2]
-des_joints = robot.ik(goal_pos[0], goal_pos[1], goal_pos[2]) # Small z offset
-
-print("Position Control")
-robot.position_control(des_joints)
-robot.open_gripper()
-
-# # Sim loop
-for i in range(50):
-    p.stepSimulation()
-    time.sleep(1./240.)
+cam_info = p.getDebugVisualizerCamera()
+print(cam_info)
