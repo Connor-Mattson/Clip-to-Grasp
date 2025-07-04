@@ -11,3 +11,4 @@ class ModelObj:
     position: list[float] = field(default_factory=lambda: [0, 0, 0])
     orientation: list[float] = field(default_factory=lambda: p.getQuaternionFromEuler([0, 0, 0]))
     scale: float = field(default=1.0)
+    grasp_offset: float = field(default=0.0)

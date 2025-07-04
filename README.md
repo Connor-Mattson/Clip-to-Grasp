@@ -46,6 +46,7 @@ To see an example of hard-coded pick-n-place with several scene objects, you can
 ```bash
 python -m examples.ycb_scene
 ```
+After initialization, you'll see the following prompt in the console: `Enter the object to grasp:`. Select one of the objects in the scene by responsing with the name in lowercase letters, e.g. "apple", "banana", "soup", "mug".
 
 
 ## Acknowledgements

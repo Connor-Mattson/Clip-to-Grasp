@@ -42,26 +42,31 @@ objs = [
     ModelObj(
         name="apple",
         path="013_apple.urdf",
-        position=[0.7, 0.3, 0.03],
-        scale=0.07
+        position=[0.7, 0.3, 0.025],
+        scale=0.1,
+        grasp_offset=-0.01
     ),
     ModelObj(
         name="banana",
         path="011_banana.urdf",
-        position=[0.7, 0.1, 0.02],
-        scale=0.07
+        position=[0.7, 0.1, 0.01],
+        orientation=p.getQuaternionFromEuler([0, 0, math.pi/2]),
+        scale=0.1,
+        grasp_offset=0.01
     ),
     ModelObj(
         name="soup",
         path="005_tomato_soup_can.urdf",
         position=[0.7, -0.1, 0.05],
-        scale=0.07
+        scale=0.1,
+        grasp_offset=0.04
     ),
     ModelObj(
         name="mug",
         path="025_mug.urdf",
         position=[0.7, -0.3, 0.03],
-        scale=0.07
+        scale=0.1,
+        grasp_offset=0.03
     )
 ]
 sim.register_objects(objs)
@@ -70,18 +75,25 @@ goals = [
     ModelObj(
         name="plate",
         path="029_plate.urdf",
-        position=[0.0, 0.7, 0.03],
-        scale=0.07
+        position=[0.0, 0.7, 0.01],
+        scale=0.1
     ),
 ]
 sim.register_objects(goals)
 
-OBJECT_TO_GRASP = 3
+object_keys = {
+    "apple": 0,
+    "banana": 1,
+    "soup": 2,
+    "mug": 3
+}
+
+OBJECT_TO_GRASP = object_keys[input("Enter the object to grasp: ")]
 
 des_joints_A = robot.ik(
     objs[OBJECT_TO_GRASP].position[0], 
     objs[OBJECT_TO_GRASP].position[1],
-    objs[OBJECT_TO_GRASP].position[2] + 0.2 # Small z offset
+    objs[OBJECT_TO_GRASP].position[2] + 0.3 # Small z offset
 )
 
 print("Position Control")
@@ -91,7 +103,7 @@ robot.position_control(des_joints_A, max_steps=1000)
 des_joints_B = robot.ik(
     objs[OBJECT_TO_GRASP].position[0], 
     objs[OBJECT_TO_GRASP].position[1],
-    objs[OBJECT_TO_GRASP].position[2] - 0.00 # Small z offset
+    objs[OBJECT_TO_GRASP].position[2] + objs[OBJECT_TO_GRASP].grasp_offset + 0.03 # Small z offset
 )
 
 print("Position Control")
@@ -119,7 +131,7 @@ robot.position_control(des_joints, max_steps=1000)
 des_joints = robot.ik(
     goals[0].position[0], 
     goals[0].position[1], 
-    goals[0].position[2] + 0.05
+    goals[0].position[2] + objs[OBJECT_TO_GRASP].grasp_offset  # Drop the object above the goal if it's large.
 ) # Small z offset
 
 print("Position Control")

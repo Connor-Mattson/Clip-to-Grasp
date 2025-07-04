@@ -125,5 +125,5 @@ class Robot:
                 jointIndex=i,
                 controlMode=p.POSITION_CONTROL,
                 targetPosition=joint_value,
-                force=100
+                force=200
             )
