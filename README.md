@@ -38,7 +38,13 @@ python -m examples.ycb_scene
 After initialization, you'll see the following prompt in the console: `Enter the object to grasp:`. Select one of the objects in the scene by responsing with the name in lowercase letters, e.g. "apple", "banana", "soup", "mug".
 
 ### Extract Object Images from end-effector camera
+You can test if the virtual camera works in the scene using the following commmand
 
+```bash
+python -m examples.ee_camera_example
+```
+
+The robot will not move in this demo, you'll just see the objects spawn in and the matplotlib GUI display.
 
 ### Testing CLIP
 To test that the clip model is working you can run
