@@ -21,17 +21,6 @@ I ran all experiments on a Macbook Pro M3 Max. Since we only require model infer
 
 ## Experiments
 
-### Testing CLIP
-To test that the clip model is working you can run
-```bash
-python -m examples.clip_example
-```
-
-This will embed an image of [my dog](media/dog.jpg) to the model and determine the similarity to "A Diagram", "A Dog", and "A Cat", you should see output similar to:
-```
-Label probs: [('a diagram', 0.012420654296875), ('a dog', 0.986328125), ('a cat', 0.0014600753784179688)]
-```
-
 ### Loading a PyBullet Scene with Franka Panda + IK
 Run the following script to test the control and inverse kinematics solver of the Franka Panda robot.
 
@@ -47,6 +36,20 @@ To see an example of hard-coded pick-n-place with several scene objects, you can
 python -m examples.ycb_scene
 ```
 After initialization, you'll see the following prompt in the console: `Enter the object to grasp:`. Select one of the objects in the scene by responsing with the name in lowercase letters, e.g. "apple", "banana", "soup", "mug".
+
+### Extract Object Images from end-effector camera
+
+
+### Testing CLIP
+To test that the clip model is working you can run
+```bash
+python -m examples.clip_example
+```
+
+This will embed an image of [my dog](media/dog.jpg) to the model and determine the similarity to "A Diagram", "A Dog", and "A Cat", you should see output similar to:
+```
+Label probs: [('a diagram', 0.012420654296875), ('a dog', 0.986328125), ('a cat', 0.0014600753784179688)]
+```
 
 
 ## Acknowledgements

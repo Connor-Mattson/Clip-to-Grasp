@@ -1,5 +1,6 @@
 import pybullet as p
 import pybullet_data
+import numpy as np
 import time
 import math
 
@@ -7,6 +8,7 @@ class Robot:
     def __init__(self, robot_id, ee_link_index=11, joint_range=[0, 7], gripper_joints=[9, 11]):
         self.id = robot_id
         self.ee_ind = ee_link_index
+        self.camera_ind = 11
         self.joints = range(joint_range[0], joint_range[1])
         self.gripper_joints = range(gripper_joints[0], gripper_joints[1])
         self.gripper_open = [0.08, 0.08]
@@ -65,7 +67,7 @@ class Robot:
 
         return joint_poses
 
-    def position_control(self, joint_poses, max_steps=1000, max_velocity=1.8):
+    def position_control(self, joint_poses, max_steps=1000, max_velocity=1.8, callback=None):
         # Apply position control with stronger motor parameters
         for i, joint_index in enumerate(self.joints): 
             p.setJointMotorControl2(
@@ -83,6 +85,8 @@ class Robot:
         for step in range(max_steps):
             p.stepSimulation()
             time.sleep(1./240.)
+            if callback is not None:
+                callback(self, step)
             
             # Check convergence every 50 steps
             if step % 50 == 0:
@@ -127,3 +131,28 @@ class Robot:
                 targetPosition=joint_value,
                 force=200
             )
+
+    def get_ee_camera_image(self, img_size=640, fov=60, near=0.01, far=2.0):
+        # Step 1: Get EE position and orientation
+        link_state = p.getLinkState(self.id, self.camera_ind, computeForwardKinematics=True)
+        cam_pos = link_state[4]
+        cam_orn = link_state[5]
+
+        # Step 2: Get camera basis vectors
+        rot_matrix = p.getMatrixFromQuaternion(cam_orn)
+        forward = [rot_matrix[2], rot_matrix[5], rot_matrix[8]]
+        up = [rot_matrix[0], rot_matrix[3], rot_matrix[6]]
+
+        # Step 3: Compute target (look-at) position
+        cam_target = [cam_pos[i] + 0.1 * forward[i] for i in range(3)]
+
+        # Step 4: Build view and projection matrices
+        view_matrix = p.computeViewMatrix(cam_pos, cam_target, up)
+        proj_matrix = p.computeProjectionMatrixFOV(fov, 1.0, near, far)
+
+        # Step 5: Capture image
+        img = p.getCameraImage(img_size, img_size, view_matrix, proj_matrix,
+                            renderer=p.ER_BULLET_HARDWARE_OPENGL)
+        rgb_np = np.reshape(img[2], (640, 640, 4))[:, :, :3]
+
+        return rgb_np
