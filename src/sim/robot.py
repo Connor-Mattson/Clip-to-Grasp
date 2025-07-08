@@ -19,6 +19,9 @@ class Robot:
         self.joint_ranges = []
         self.rest_poses = []
 
+        self.view_matrix = None
+        self.projection_matrix = None
+
         # Set up proper rest poses - especially important for elbow joint
         good_rest_poses = [0.0, 0.0, 0.0, -1.5, 0.0, 1.5, 0.0]  # Elbow bent naturally
         
@@ -147,11 +150,11 @@ class Robot:
         cam_target = [cam_pos[i] + 0.1 * forward[i] for i in range(3)]
 
         # Step 4: Build view and projection matrices
-        view_matrix = p.computeViewMatrix(cam_pos, cam_target, up)
-        proj_matrix = p.computeProjectionMatrixFOV(fov, 1.0, near, far)
+        self.view_matrix = p.computeViewMatrix(cam_pos, cam_target, up)
+        self.projection_matrix = p.computeProjectionMatrixFOV(fov, 1.0, near, far)
 
         # Step 5: Capture image
-        img = p.getCameraImage(img_size, img_size, view_matrix, proj_matrix,
+        img = p.getCameraImage(img_size, img_size, self.view_matrix, self.projection_matrix,
                             renderer=p.ER_BULLET_HARDWARE_OPENGL)
         rgb_np = np.reshape(img[2], (640, 640, 4))[:, :, :3]
 

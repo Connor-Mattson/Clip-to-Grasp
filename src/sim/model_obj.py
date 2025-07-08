@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 class ModelObj:
     name: str
     path: str
+    oid: int = 0
     position: list[float] = field(default_factory=lambda: [0, 0, 0])
     orientation: list[float] = field(default_factory=lambda: p.getQuaternionFromEuler([0, 0, 0]))
     scale: float = field(default=1.0)

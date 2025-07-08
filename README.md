@@ -46,6 +46,15 @@ python -m examples.ee_camera_example
 
 The robot will not move in this demo, you'll just see the objects spawn in and the matplotlib GUI display.
 
+### Draw BB on the EE image
+```bash
+python -m examples.object_extraction_example
+```
+
+After the renderer loads everything in, you'll see the BB cropped objects from the EE perspective appear in a pop-up window. After closing, you'll see each of the individual crops of the photo for each object, which will be injested by CLIP.
+
+---
+
 ### Testing CLIP
 To test that the clip model is working you can run
 ```bash
