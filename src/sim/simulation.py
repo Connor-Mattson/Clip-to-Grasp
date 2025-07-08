@@ -29,7 +29,12 @@ class BulletSim:
         )
         self.objects.append(obj)
         self.object_ids.append(new_obj_id)
+        obj.oid = new_obj_id
         return new_obj_id
+
+    def get_object_aabb(self, obj_id):
+        aabb_min, aabb_max = p.getAABB(obj_id)
+        return aabb_min, aabb_max
 
     def register_objects(self, objs: list[ModelObj]):
         for obj in objs:
