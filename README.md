@@ -7,7 +7,7 @@ Simulated Grasping from Multi-Modal Grounding (CLIP)
 Want quick results? Just run this
 ```
 pip install -r requirements.txt
-TODO: Final script
+python -m main
 ```
 
 Otherwise, feel free to keep reading.
