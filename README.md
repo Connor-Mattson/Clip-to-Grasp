@@ -66,6 +66,10 @@ This will embed an image of [my dog](media/dog.jpg) to the model and determine t
 Label probs: [('a diagram', 0.012420654296875), ('a dog', 0.986328125), ('a cat', 0.0014600753784179688)]
 ```
 
+Then, you can test CLIP alignment with an open-vocabluary query on the 4 extracted images using
+```bash 
+python -m examples.clip_repr_example
+```
 
 ## Acknowledgements
 - Thanks to @kwonathan for the [great repo with URDFs for the YCB dataset](https://github.com/kwonathan/ycb_urdfs/tree/main).

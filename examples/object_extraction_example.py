@@ -7,6 +7,8 @@ from src.sim.simulation import BulletSim
 from src.sim.model_obj import ModelObj
 import matplotlib.pyplot as plt
 from src.perception.crop import AABBCropper
+from PIL import Image
+
 
 # Connect to GUI
 sim = BulletSim()
@@ -67,6 +69,7 @@ objs = [
     ModelObj(
         name="mug",
         path="025_mug.urdf",
+        orientation=p.getQuaternionFromEuler([0, 0, math.pi/2]),
         position=[0.7, -0.3, 0.03],
         scale=0.1,
         grasp_offset=0.03
@@ -82,6 +85,11 @@ cropped_images, boxes_img = cropper.crop_all_objects()
 
 plt.imshow(boxes_img)
 plt.show()
+
+# Save the cropped images to /media/cropped_ycb
+for i, img in enumerate(cropped_images):
+    im = Image.fromarray(img)
+    im.save(f"media/cropped_ycb/{i}.png")
 
 # Go through each cropped image and show it
 for i, img in enumerate(cropped_images):
