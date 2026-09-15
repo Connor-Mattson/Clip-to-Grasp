@@ -1,3 +1,4 @@
+import sys
 import pybullet as p
 import pybullet_data
 import time
@@ -11,6 +12,36 @@ from PIL import Image
 import torch
 import numpy as np
 import clip
+
+# CLIP cosine similarity the best crop must reach to count as a match. With the "a photo of ..." prompt,
+# queries naming an object in this scene scored >= 0.272 and most unrelated queries <= 0.263, but queries
+# for similar-looking objects (e.g. "a hammer") can reach ~0.27, so this only rejects clearly unrelated ones.
+MIN_SIMILARITY = 0.265
+# Lowest grasp target (m) that keeps the fingertips off the ground plane
+MIN_GRASP_HEIGHT = 0.02
+# Gap (m) between the bottom of the held object and the top of the plate when released
+PLACE_CLEARANCE = 0.01
+# Joint tolerance (rad) for considering a motion complete
+JOINT_TOLERANCE = 0.01
+# Grasp at most this far (m) below an object's top so the palm of the hand clears it
+MAX_GRASP_DEPTH = 0.04
+
+
+def grasp_point(sim, obj):
+    """Top-down grasp target from the object's current simulated pose (not its spawn position)."""
+    (x, y, _), _ = p.getBasePositionAndOrientation(obj.oid)
+    box_min, box_max = sim.get_object_aabb(obj.oid)
+    z = max((box_min[2] + box_max[2]) / 2, box_max[2] - MAX_GRASP_DEPTH) + obj.grasp_offset
+    return [x, y, max(z, MIN_GRASP_HEIGHT)]
+
+
+def move_straight(robot, start, end, waypoints=10, **control_kwargs):
+    """Move the EE along a straight line through IK waypoints. A single joint-space move swings the
+    hand in an arc, which can sweep it into the object being approached."""
+    for t in np.linspace(0, 1, waypoints + 1)[1:]:
+        waypoint = [s + t * (e - s) for s, e in zip(start, end)]
+        robot.position_control(robot.ik(*waypoint), **control_kwargs)
+
 
 if __name__ == "__main__":
     # Load the CLIP model
@@ -55,31 +86,28 @@ if __name__ == "__main__":
             name="apple",
             path="013_apple.urdf",
             position=[0.7, 0.3, 0.025],
-            scale=0.1,
-            grasp_offset=-0.01
+            scale=0.1
         ),
         ModelObj(
             name="banana",
             path="011_banana.urdf",
             position=[0.7, 0.1, 0.01],
             orientation=p.getQuaternionFromEuler([0, 0, math.pi/2]),
-            scale=0.1,
-            grasp_offset=0.01
+            scale=0.1
         ),
         ModelObj(
             name="soup",
             path="005_tomato_soup_can.urdf",
             position=[0.7, -0.1, 0.05],
-            scale=0.1,
-            grasp_offset=0.04
+            # At 0.1 the can is ~7.7cm wide, too close to the gripper's ~8cm opening to grasp top-down
+            scale=0.085
         ),
         ModelObj(
             name="mug",
             path="025_mug.urdf",
             orientation=p.getQuaternionFromEuler([0, 0, math.pi/2]),
             position=[0.7, -0.3, 0.03],
-            scale=0.1,
-            grasp_offset=0.03
+            scale=0.1
         )
     ]
     sim.register_objects(objs)
@@ -93,6 +121,10 @@ if __name__ == "__main__":
         ),
     ]
     sim.register_objects(goals)
+
+    # Let the objects settle under gravity before perceiving the scene
+    for i in range(240):
+        p.stepSimulation()
 
     img = robot.get_ee_camera_image()
     cropper = AABBCropper(sim, robot, img, objs)
@@ -111,8 +143,7 @@ if __name__ == "__main__":
 
     # Tokenize user input
     user_input = input("Enter a query: ")
-    # user_input = "a banana"
-    labels = [user_input]
+    labels = [f"a photo of {user_input}"]
     text = clip.tokenize(labels).to(device)
 
     # Encode the image and text
@@ -126,29 +157,30 @@ if __name__ == "__main__":
         print(f"Image {i} similarity: {similarity}")
         similarities.append(similarity)
 
-    # Display the best match
+    # Display the best match, or stop if nothing in the scene matches the query
     inferred_obj_id = np.argmax(similarities)
-    print(f"Best match: {objs[inferred_obj_id].name}")
+    if similarities[inferred_obj_id] < MIN_SIMILARITY:
+        print(f"No object matches '{user_input}' "
+              f"(best similarity {similarities[inferred_obj_id]:.3f} < {MIN_SIMILARITY})")
+        sim.close()
+        sys.exit(1)
+    target = objs[inferred_obj_id]
+    print(f"Best match: {target.name}")
 
-    # Move the robot to the best match
-    des_joints_A = robot.ik(
-        objs[inferred_obj_id].position[0], 
-        objs[inferred_obj_id].position[1],
-        objs[inferred_obj_id].position[2] + 0.3 # Small z offset
-    )
+    # Grasp from where the object actually is now
+    grasp = grasp_point(sim, target)
+    grasp_above_bottom = grasp[2] - sim.get_object_aabb(target.oid)[0][2]
+
+    # Move above the best match
+    above_grasp = [grasp[0], grasp[1], grasp[2] + 0.3]
 
     print("Position Control")
     robot.open_gripper()
-    robot.position_control(des_joints_A, max_steps=1000)
+    robot.position_control(robot.ik(*above_grasp), max_steps=1000, tolerance=JOINT_TOLERANCE)
 
-    des_joints_B = robot.ik(
-        objs[inferred_obj_id].position[0], 
-        objs[inferred_obj_id].position[1],
-        objs[inferred_obj_id].position[2] + objs[inferred_obj_id].grasp_offset + 0.03 # Small z offset
-    )
-
+    # Descend straight down onto the object
     print("Position Control")
-    robot.position_control(des_joints_B, max_steps=800, max_velocity=1.1)
+    move_straight(robot, above_grasp, grasp, max_steps=200, max_velocity=1.1, tolerance=JOINT_TOLERANCE)
 
     robot.close_gripper()
     # Sim loop
@@ -157,26 +189,20 @@ if __name__ == "__main__":
         time.sleep(1./240.)
 
     print("Position Control")
-    robot.position_control(des_joints_A, max_steps=800, max_velocity=1.1)  
+    move_straight(robot, grasp, above_grasp, max_steps=200, max_velocity=1.1, tolerance=JOINT_TOLERANCE)
 
-    des_joints = robot.ik(
-        goals[0].position[0], 
-        goals[0].position[1], 
-        goals[0].position[2] + 0.2
-    ) # Small z offset
+    # Release so the bottom of the object sits just above the top of the plate
+    (goal_x, goal_y, _), _ = p.getBasePositionAndOrientation(goals[0].oid)
+    place_z = sim.get_object_aabb(goals[0].oid)[1][2] + grasp_above_bottom + PLACE_CLEARANCE
+    place = [goal_x, goal_y, place_z]
+    above_place = [goal_x, goal_y, place_z + 0.2]
 
     print("Position Control")
-    robot.position_control(des_joints, max_steps=1000)
+    robot.position_control(robot.ik(*above_place), max_steps=1000, tolerance=JOINT_TOLERANCE)
 
     # Decend to the goal
-    des_joints = robot.ik(
-        goals[0].position[0], 
-        goals[0].position[1], 
-        goals[0].position[2] + objs[inferred_obj_id].grasp_offset  # Drop the object above the goal if it's large.
-    ) # Small z offset
-
     print("Position Control")
-    robot.position_control(des_joints, max_velocity=1.3, max_steps=300)
+    move_straight(robot, above_place, place, max_steps=200, max_velocity=1.3, tolerance=JOINT_TOLERANCE)
     robot.open_gripper()
 
     # # Sim loop

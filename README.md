@@ -6,6 +6,8 @@ Simulated Grasping from Multi-Modal Grounding (CLIP)
 ### TL;DR
 Want quick results? Just run this
 ```
+conda env create -f environment.yml
+conda activate roboCLIP
 pip install -r requirements.txt
 python -m main
 ```
@@ -13,11 +15,13 @@ python -m main
 Otherwise, feel free to keep reading.
 
 ## Setup
-Install all requirements
+Create the conda environment (provides PyBullet), then install the Python requirements into it
 ```
+conda env create -f environment.yml
+conda activate roboCLIP
 pip install -r requirements.txt
 ```
-I ran all experiments on a Macbook Pro M3 Max. Since we only require model inference (not training), the experiments are all run on the CPU. 
+The environment file was exported on macOS. I ran all experiments on a Macbook Pro M3 Max. Since we only require model inference (not training), the experiments are all run on the CPU. 
 
 ## Experiments
 
@@ -70,6 +74,18 @@ Then, you can test CLIP alignment with an open-vocabluary query on the 4 extract
 ```bash 
 python -m examples.clip_repr_example
 ```
+
+---
+
+### End-to-End: Language Query to Pick-and-Place
+Put everything together with
+```bash
+python -m main
+```
+
+After the scene settles, the robot captures an image from its end-effector camera and crops out each object. At `Enter a query:`, describe an object in plain language, e.g. "a banana", "something yellow", "a mug". CLIP picks the crop that best matches the query, and the Panda grasps that object from its current pose and places it on the plate.
+
+If no crop is similar enough to the query (e.g. "a giraffe"), the script prints `No object matches ...` and exits without moving. The cutoff is `MIN_SIMILARITY` in `main.py`, measured on this scene: it rejects clearly unrelated queries, but a query for a similar-looking object that isn't there (e.g. "a hammer") can still pick the closest match. Re-check it if you change the objects or camera.
 
 ## Acknowledgements
 - Thanks to @kwonathan for the [great repo with URDFs for the YCB dataset](https://github.com/kwonathan/ycb_urdfs/tree/main).
