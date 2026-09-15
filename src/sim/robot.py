@@ -90,27 +90,21 @@ class Robot:
                 maxVelocity=max_velocity        
             )
             
-        # Wait for joints to reach target positions 
+        # Wait for joints to reach target positions, sleeping only for what's left of each 1/240s tick
+        # so time spent computing a step doesn't slow the simulation below real time
+        next_tick = time.perf_counter()
         for step in range(max_steps):
             p.stepSimulation()
-            time.sleep(1./240.)
+            next_tick += 1./240.
+            time.sleep(max(0.0, next_tick - time.perf_counter()))
             if callback is not None:
                 callback(self, step)
-            
-            # Check convergence every 50 steps
-            if step % 50 == 0:
-                all_converged = True
-                for i, joint_index in enumerate(self.joints):
-                    current_pos = p.getJointState(self.id, joint_index)[0]
-                    target_pos = joint_poses[i]
-                    error = abs(current_pos - target_pos)
-                    
-                    if error > tolerance:
-                        all_converged = False
-                
-                if all_converged:
-                    print(f"All joints converged after {step} steps")
-                    break
+
+            # Check convergence every step
+            joint_states = p.getJointStates(self.id, list(self.joints))
+            if all(abs(state[0] - target) <= tolerance for state, target in zip(joint_states, joint_poses)):
+                print(f"All joints converged after {step} steps")
+                break
         
         if step >= max_steps - 1:
             print(f"Warning: Not all joints converged within {max_steps} steps")

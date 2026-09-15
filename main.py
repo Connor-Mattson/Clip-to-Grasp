@@ -23,6 +23,8 @@ MIN_GRASP_HEIGHT = 0.02
 PLACE_CLEARANCE = 0.01
 # Joint tolerance (rad) for considering a motion complete
 JOINT_TOLERANCE = 0.01
+# Looser joint tolerance (rad) for intermediate waypoints, so straight-line moves don't stop at each one
+WAYPOINT_TOLERANCE = 0.02
 # Grasp at most this far (m) below an object's top so the palm of the hand clears it
 MAX_GRASP_DEPTH = 0.04
 
@@ -35,12 +37,15 @@ def grasp_point(sim, obj):
     return [x, y, max(z, MIN_GRASP_HEIGHT)]
 
 
-def move_straight(robot, start, end, waypoints=10, **control_kwargs):
+def move_straight(robot, start, end, waypoints=10, tolerance=JOINT_TOLERANCE, **control_kwargs):
     """Move the EE along a straight line through IK waypoints. A single joint-space move swings the
-    hand in an arc, which can sweep it into the object being approached."""
-    for t in np.linspace(0, 1, waypoints + 1)[1:]:
+    hand in an arc, which can sweep it into the object being approached. Only the final waypoint has
+    to be reached precisely; the arm passes through the others without stopping."""
+    for i in range(1, waypoints + 1):
+        t = i / waypoints
         waypoint = [s + t * (e - s) for s, e in zip(start, end)]
-        robot.position_control(robot.ik(*waypoint), **control_kwargs)
+        waypoint_tolerance = tolerance if i == waypoints else WAYPOINT_TOLERANCE
+        robot.position_control(robot.ik(*waypoint), tolerance=waypoint_tolerance, **control_kwargs)
 
 
 if __name__ == "__main__":
