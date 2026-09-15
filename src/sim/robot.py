@@ -35,24 +35,34 @@ class Robot:
             
         print(f"Robot initialized with proper joint limits and rest poses.")
 
-    def ik(self, x, y, z):
+    def ik(self, x, y, z, max_attempts=20, threshold=1e-3):
         target_orn = p.getQuaternionFromEuler([math.pi, 0, 0])
         target_pos = [x, y, z]
 
-        joint_poses = p.calculateInverseKinematics(
-            bodyUniqueId=self.id,
-            endEffectorLinkIndex=self.ee_ind,
-            targetPosition=target_pos,
-            targetOrientation=target_orn,
-            lowerLimits=self.lower_limits,
-            upperLimits=self.upper_limits,
-            jointRanges=self.joint_ranges,
-            restPoses=self.rest_poses,
-            maxNumIterations=100,
-            residualThreshold=1e-4,
-        )
-
-        joint_poses = joint_poses[:len(self.joints)]
+        # A single IK solve from the current configuration can land several cm off target, so re-solve
+        # from each solution until the EE reaches the target, then restore the robot's actual joint state
+        saved_states = [p.getJointState(self.id, joint_index)[:2] for joint_index in self.joints]
+        for attempt in range(max_attempts):
+            joint_poses = p.calculateInverseKinematics(
+                bodyUniqueId=self.id,
+                endEffectorLinkIndex=self.ee_ind,
+                targetPosition=target_pos,
+                targetOrientation=target_orn,
+                lowerLimits=self.lower_limits,
+                upperLimits=self.upper_limits,
+                jointRanges=self.joint_ranges,
+                restPoses=self.rest_poses,
+                maxNumIterations=100,
+                residualThreshold=1e-4,
+            )[:len(self.joints)]
+            for joint_index, joint_pos in zip(self.joints, joint_poses):
+                p.resetJointState(self.id, joint_index, joint_pos)
+            ee_pos = p.getLinkState(self.id, self.ee_ind, computeForwardKinematics=True)[4]
+            error = math.dist(ee_pos, target_pos)
+            if error < threshold:
+                break
+        for joint_index, (joint_pos, joint_vel) in zip(self.joints, saved_states):
+            p.resetJointState(self.id, joint_index, joint_pos, joint_vel)
                 
         # Check if any joint commands are outside limits (should not happen with proper config)
         for i, (jp, ll, ul) in enumerate(zip(joint_poses, self.lower_limits, self.upper_limits)):
@@ -60,17 +70,13 @@ class Robot:
                 joint_name = p.getJointInfo(self.id, list(self.joints)[i])[1].decode('utf-8')
                 print(f"WARNING: Joint {list(self.joints)[i]} ({joint_name}) = {jp:.3f} outside limits [{ll:.3f}, {ul:.3f}]")
 
-        # Check how close the EE actually gets
-        ee_state = p.getLinkState(self.id, self.ee_ind)
-        actual_pos = ee_state[4]
-        error = math.dist(actual_pos, target_pos)
 
         if error > 0.02:
             print(f"[WARN] IK error too large ({error:.3f}m) — pose may not be reachable or orientation constraint too strict.")
 
         return joint_poses
 
-    def position_control(self, joint_poses, max_steps=1000, max_velocity=1.8, callback=None):
+    def position_control(self, joint_poses, max_steps=1000, max_velocity=1.8, callback=None, tolerance=0.05):
         # Apply position control with stronger motor parameters
         for i, joint_index in enumerate(self.joints): 
             p.setJointMotorControl2(
@@ -84,27 +90,21 @@ class Robot:
                 maxVelocity=max_velocity        
             )
             
-        # Wait for joints to reach target positions 
+        # Wait for joints to reach target positions, sleeping only for what's left of each 1/240s tick
+        # so time spent computing a step doesn't slow the simulation below real time
+        next_tick = time.perf_counter()
         for step in range(max_steps):
             p.stepSimulation()
-            time.sleep(1./240.)
+            next_tick += 1./240.
+            time.sleep(max(0.0, next_tick - time.perf_counter()))
             if callback is not None:
                 callback(self, step)
-            
-            # Check convergence every 50 steps
-            if step % 50 == 0:
-                all_converged = True
-                for i, joint_index in enumerate(self.joints):
-                    current_pos = p.getJointState(self.id, joint_index)[0]
-                    target_pos = joint_poses[i]
-                    error = abs(current_pos - target_pos)
-                    
-                    if error > 0.05:  # 0.05 radian tolerance
-                        all_converged = False
-                
-                if all_converged:
-                    print(f"All joints converged after {step} steps")
-                    break
+
+            # Check convergence every step
+            joint_states = p.getJointStates(self.id, list(self.joints))
+            if all(abs(state[0] - target) <= tolerance for state, target in zip(joint_states, joint_poses)):
+                print(f"All joints converged after {step} steps")
+                break
         
         if step >= max_steps - 1:
             print(f"Warning: Not all joints converged within {max_steps} steps")
