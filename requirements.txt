@@ -1,8 +1,13 @@
 clip @ git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1
 ftfy==6.3.1
+matplotlib==3.10.3
+numpy==2.2.6
+opencv-python==4.12.0.88
 packaging==25.0
 pillow==11.3.0
+pybullet==3.2.5
 regex==2024.11.6
+torch==2.7.1
 torchvision==0.22.1
 tqdm==4.67.1
 wcwidth==0.2.13

@@ -2,7 +2,7 @@
 # TODO: Comeback and do thorough testing on this.
 
 # Name of the environment
-ENV_NAME=roboCLIP
+ENV_NAME=clip-to-grasp
 PYTHON_VERSION=3.11
 ENV_FILE=environment.yml
 REQUIREMENTS=requirements.txt
